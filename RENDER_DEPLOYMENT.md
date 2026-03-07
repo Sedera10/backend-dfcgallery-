@@ -2,14 +2,22 @@
 
 ## Étapes de déploiement sur Render
 
-### 1. **Préparer le repository**
+### 1. **Préparer le repository (VERSION SIMPLIFIÉE d'abord)**
 
 ```bash
-# Assurez-vous que tous les fichiers sont commités
+# IMPORTANT: Utiliser d'abord la version simplifiée pour éviter les erreurs de build
+python deploy-mode.py production
+
+# Puis commiter et pusher
 git add .
-git commit -m "Ready for Render deployment"
+git commit -m "Deploy to Render - production mode (without ML)"
 git push origin main
 ```
+
+**🔧 Pourquoi en 2 étapes ?**
+- Face Recognition/OCR causent des erreurs de build sur Render
+- On déploie d'abord les fonctions essentielles (upload, gallery, etc.)
+- Les features ML peuvent être ajoutées plus tard avec un plan payant
 
 ### 2. **Créer les services sur Render**
 
@@ -145,3 +153,29 @@ Une fois déployé, testez :
 1. **Health check** : `GET https://dfc-galery-api.onrender.com/health`
 2. **Documentation** : `https://dfc-galery-api.onrender.com/docs`
 3. **Upload d'image** : Test via l'interface Swagger
+
+## 🤖 Réactiver Face Recognition & OCR (Plus tard)
+
+### Étape 1: Upgrade vers plan payant
+- **Starter Plan** ($7/mois) pour éviter les timeouts de build
+- Plus de RAM et temps de build pour compiler `dlib`
+
+### Étape 2: Activer les features ML
+```bash
+# En local
+python deploy-mode.py full
+git add requirements.txt
+git commit -m "Activate ML features"
+git push origin main
+```
+
+### Étape 3: Variables d'environnement ML
+Ajoutez dans Render :
+```bash
+FACE_RECOGNITION_ENABLED=true
+OCR_ENABLED=true
+FACE_RECOGNITION_TOLERANCE=0.6
+OCR_LANGUAGES=["fr","en"]
+```
+
+> 💡 **Astuce** : Votre app fonctionne déjà sans ML. Les features sont optionnelles !
