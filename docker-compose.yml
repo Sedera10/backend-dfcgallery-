@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: dfc_postgres
+    environment:
+      POSTGRES_USER: disciplesfc
+      POSTGRES_PASSWORD: disciplesfc
+      POSTGRES_DB: dfcgalery
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U disciplesfc -d dfcgalery"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # FastAPI Application
+  backend:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: dfc_backend
+    environment:
+      - DATABASE_URL=postgresql://disciplesfc:disciplesfc@postgres:5432/dfcgalery
+      - DEBUG=True
+      - CORS_ORIGINS=["http://localhost:3000", "http://localhost:8080"]
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app/app:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend (Optional - si vous voulez aussi conteneuriser le frontend)
+  # frontend:
+  #   build: 
+  #     context: ../frontend/app
+  #     dockerfile: Dockerfile
+  #   container_name: dfc_frontend
+  #   ports:
+  #     - "3000:3000"
+  #   depends_on:
+  #     - backend
+
+volumes:
+  postgres_data:
+
+networks:
+  default:
+    name: dfc_network
