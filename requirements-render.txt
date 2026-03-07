@@ -1,31 +1,31 @@
 # FastAPI Core
-fastapi==0.109.0
-uvicorn[standard]==0.27.0
-gunicorn==21.2.0
-python-multipart==0.0.6
+fastapi>=0.109.0,<1.0.0
+uvicorn[standard]>=0.27.0,<1.0.0
+gunicorn>=21.2.0,<23.0.0
+python-multipart>=0.0.6,<1.0.0
 
 # Database
-sqlalchemy==2.0.25
-psycopg2-binary==2.9.9
-pgvector==0.2.4
+sqlalchemy>=2.0.25,<3.0.0
+psycopg2-binary>=2.9.9,<3.0.0
+pgvector>=0.2.4,<1.0.0
 
 # Settings
-pydantic==2.5.3
-pydantic-settings==2.1.0
-python-dotenv==1.0.0
+pydantic>=2.5.3,<3.0.0
+pydantic-settings>=2.1.0,<3.0.0
+python-dotenv>=1.0.0,<2.0.0
 
 # Cloudinary (upload images)
-cloudinary==1.38.0
+cloudinary>=1.38.0,<2.0.0
 
 # Basic Image Processing (version compatible)
-Pillow==10.1.0
-numpy==1.24.3
+Pillow>=10.1.0,<12.0.0
+numpy>=1.24.3,<3.0.0
 
 # HTTP Requests
-requests==2.31.0
-httpx==0.25.2
+requests>=2.31.0,<3.0.0
+httpx>=0.25.2,<1.0.0
 
 # Authentication & Security
-python-jose[cryptography]==3.3.0
-passlib[bcrypt]==1.7.4
-python-dateutil==2.8.2
+python-jose[cryptography]>=3.3.0,<4.0.0
+passlib[bcrypt]>=1.7.4,<2.0.0
+python-dateutil>=2.8.2,<3.0.0
