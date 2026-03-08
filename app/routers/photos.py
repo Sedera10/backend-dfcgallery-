@@ -1,33 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import List
-from app.database.connection import get_db, SessionLocal
+from app.database.connection import get_db
 from app.database.models import Photo, FaceDetection, JerseyDetection, Match
-from app.schemas.photo_schema import PhotoCreate, PhotoUpdate, PhotoResponse, PhotoWithFaces
+from app.schemas.photo_schema import PhotoCreate, PhotoUpdate, PhotoResponse
 from app.services.imgbb_service import ImgBBService
-from app.services.face_recognition_service import FaceRecognitionService
-from app.services.jersey_ocr_service import JerseyOCRService
 import logging
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-
-
-def _encode_photo_faces_bg(photo_id: int, image_url: str):
-    """Background task : encode les visages + détecte les numéros de maillot."""
-    db = SessionLocal()
-    try:
-        # 1. Encodage facial
-        svc = FaceRecognitionService()
-        svc.encode_faces_in_photo(photo_id, image_url, db)
-        
-        # 2. Détection numéros de maillot (OCR)
-        ocr = JerseyOCRService()
-        ocr.detect_and_store(photo_id, image_url, db)
-    except Exception as e:
-        logger.error("BG encoding error photo %s: %s", photo_id, e)
-    finally:
-        db.close()
 
 
 @router.get("/", response_model=List[PhotoResponse])
@@ -41,7 +22,7 @@ def get_all_photos(
     return photos
 
 
-@router.get("/{id_photo}", response_model=PhotoWithFaces)
+@router.get("/{id_photo}", response_model=PhotoResponse)
 def get_photo(id_photo: int, db: Session = Depends(get_db)):
     """Récupérer une photo par son ID"""
     photo = db.query(Photo).filter(Photo.id_photo == id_photo).first()
@@ -56,11 +37,10 @@ def get_photo(id_photo: int, db: Session = Depends(get_db)):
 @router.post("/upload/{id_match}", response_model=PhotoResponse, status_code=status.HTTP_201_CREATED)
 async def upload_photo(
     id_match: int,
-    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
-    """Upload une photo et lance l'encodage facial en background"""
+    """Upload une photo pour un match"""
     match = db.query(Match).filter(Match.id_match == id_match).first()
     if not match:
         raise HTTPException(
@@ -76,20 +56,16 @@ async def upload_photo(
     db.commit()
     db.refresh(new_photo)
     
-    # Encodage facial en background
-    background_tasks.add_task(_encode_photo_faces_bg, new_photo.id_photo, new_photo.url)
-    
     return new_photo
 
 
 @router.post("/upload-multiple/{id_match}", response_model=List[PhotoResponse], status_code=status.HTTP_201_CREATED)
 async def upload_multiple_photos(
     id_match: int,
-    background_tasks: BackgroundTasks,
     files: List[UploadFile] = File(...),
     db: Session = Depends(get_db)
 ):
-    """Upload plusieurs photos et lance l'encodage facial en background"""
+    """Upload plusieurs photos pour un match"""
     match = db.query(Match).filter(Match.id_match == id_match).first()
     if not match:
         raise HTTPException(
@@ -122,8 +98,6 @@ async def upload_multiple_photos(
         db.commit()
         for photo in uploaded_photos:
             db.refresh(photo)
-            # Encodage facial en background pour chaque photo
-            background_tasks.add_task(_encode_photo_faces_bg, photo.id_photo, photo.url)
     
     if errors and not uploaded_photos:
         db.rollback()
@@ -133,38 +107,6 @@ async def upload_multiple_photos(
         )
     
     return uploaded_photos
-
-
-@router.post("/{id_photo}/detect-faces", response_model=PhotoWithFaces)
-async def detect_faces_in_photo(
-    id_photo: int,
-    db: Session = Depends(get_db)
-):
-    """Détecter les visages dans une photo et les enregistrer"""
-    photo = db.query(Photo).filter(Photo.id_photo == id_photo).first()
-    if not photo:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Photo avec l'ID {id_photo} non trouvée"
-        )
-    
-    # Détection des visages
-    face_service = FaceRecognitionService()
-    faces = await face_service.detect_faces(photo.url, db)
-    
-    # Enregistrer les détections en base
-    for face_data in faces:
-        face_detection = FaceDetection(
-            id_photo=id_photo,
-            id_joueur=face_data.get("id_joueur"),
-            encoding=face_data.get("encoding")
-        )
-        db.add(face_detection)
-    
-    db.commit()
-    db.refresh(photo)
-    
-    return photo
 
 
 @router.delete("/{id_photo}", status_code=status.HTTP_204_NO_CONTENT)

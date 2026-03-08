@@ -37,19 +37,6 @@ def root():
         "docs": "/docs"
     }
 
-@app.get("/debug/config")
-def debug_config():
-    """Endpoint de debug pour vérifier la configuration"""
-    from app.config.settings import settings
-    import cloudinary
-    
-    return {
-        "settings_cloud_name": settings.CLOUDINARY_CLOUD_NAME,
-        "settings_api_key": settings.CLOUDINARY_API_KEY,
-        "cloudinary_config_cloud_name": cloudinary.config().cloud_name,
-        "cloudinary_config_api_key": cloudinary.config().api_key
-    }
-
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
